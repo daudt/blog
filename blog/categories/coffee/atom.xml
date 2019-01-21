@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Coffee | Rafael's Blog]]></title>
+  <link href="http://daudt.github.io/blog/categories/coffee/atom.xml" rel="self"/>
+  <link href="http://daudt.github.io/"/>
+  <updated>2015-12-20T16:04:06-07:00</updated>
+  <id>http://daudt.github.io/</id>
+  <author>
+    <name><![CDATA[Rafael Daudt]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Java Automation (Not That Kind of Java)]]></title>
+    <link href="http://daudt.github.io/blog/2014/05/28/java-automation-not-that-kind-of-java/"/>
+    <updated>2014-05-28T22:35:06-06:00</updated>
+    <id>http://daudt.github.io/blog/2014/05/28/java-automation-not-that-kind-of-java</id>
+    <content type="html"><![CDATA[<p>I love automating things. Automating tests can save you lots of time during regression and make for testing less tedious. Automating your morning can also save you time and be fun. A friend of mine once told me that since I love automation so much, he would not be surprised if I would one day automate my coffee brewing in the morning (yes, that Java). So here it goes, Bryan.
+Sure, programmable coffee makers have been around for a while and they are fairly inexpensive. But I didn&rsquo;t want to be a slave of the machine and have to wake up at 6 a.m. because that&rsquo;s the time the coffee pot was programmed to. I wanted to get my cup of coffee brewed fresh as soon as I walked in the office (which can occur within a window of a couple of hours).</p>
+
+<h2>How?</h2>
+
+<p>I bought the cheapest coffee maker I could find, because I wanted something that had only an on/off switch. You can find one of these at Walmart or Target. Looking back I probably would have chosen a model that has an auto shut off feature.
+To build the remote controlled circuit here is what you&rsquo;ll need:</p>
+
+<ul>
+<li>Relay control kit from <a href="https://www.sparkfun.com/products/11042">Sparkfun</a></li>
+<li>Arduino <a href="http://arduino.cc/en/Main/arduinoBoardUno">Uno</a> board - Sparkfun also carry these.</li>
+<li>Arduino <a href="http://arduino.cc/en/Main/ArduinoEthernetShield">Ethernet</a> shield.</li>
+</ul>
+
+
+<p>This <a href="http://www.instructables.com/id/Arduino-Controlled-Relay-Box/?ALLSTEPS">link</a> shows how to assemble the relay control kit and putting all inside a neat little outlet box like mine. You can find the case and outlet at your nearest hardware store.</p>
+
+<p><img src="/images/IMG_1639_web.jpg"></p>
+
+<p>The missing piece on the tutorial above is that you need to make your Arduino talk with the interwebs and listen for requests. That might sound like it&rsquo;s complicated, but in fact it&rsquo;s way easier than you think. Thanks to a service called Teleduino, this setup works through firewalls and internet routers, since the Arduino will first connect to the Teleduino service and then wait for requests.
+Once you request an access key on the Teleduino <a href="https://www.teleduino.org/">website</a>, you need to tell the service which pin you want to use, by making a simple http call:</p>
+
+<p><a href="http://us01.proxy.teleduino.org/api/1.0/328.php?k=MY_KEY&amp;r=definePinMode&amp;pin=4&amp;mode=1">http://us01.proxy.teleduino.org/api/1.0/328.php?k=MY_KEY&amp;r=definePinMode&amp;pin=4&amp;mode=1</a></p>
+
+<p>You&rsquo;ll need to replace &lsquo;MY_KEY&rsquo; with the access key you got, plus modify the pin number to match the pin connected to the signal wire on the Arduino (pin 4 on my example). You only need to make this call once after the Arduino is online.
+Then a second call specifies if you want the pin to be on or off (0 or 1):</p>
+
+<p><a href="http://us01.proxy.teleduino.org/api/1.0/328.php?k=MY_KEY&amp;r=setDigitalOutput&amp;pin=4&amp;output=1">http://us01.proxy.teleduino.org/api/1.0/328.php?k=MY_KEY&amp;r=setDigitalOutput&amp;pin=4&amp;output=1</a></p>
+
+<p>Change the last parameter to 0 if you want to turn the coffee maker off.</p>
+
+<iframe width="640" height="360" src="//www.youtube.com/embed/fMeuRK8zDaw" frameborder="0" allowfullscreen></iframe>
+
+
+<p>Ideally, you would have a mobile app of some sort that would have these service calls built in. That&rsquo;s next on the list. Also, version 2.0 of this project needs to have some extra capabilities like grinding the beans and filling the water automatically. Stay tuned.</p>
+]]></content>
+  </entry>
+  
+</feed>

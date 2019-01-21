@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Selenium | Rafael's Blog]]></title>
+  <link href="http://daudt.github.io/blog/categories/selenium/atom.xml" rel="self"/>
+  <link href="http://daudt.github.io/"/>
+  <updated>2015-12-20T16:04:06-07:00</updated>
+  <id>http://daudt.github.io/</id>
+  <author>
+    <name><![CDATA[Rafael Daudt]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Selenium in the Cloud With Sauce Labs]]></title>
+    <link href="http://daudt.github.io/blog/2014/11/20/selenium-in-the-cloud-with-sauce-labs/"/>
+    <updated>2014-11-20T17:37:00-07:00</updated>
+    <id>http://daudt.github.io/blog/2014/11/20/selenium-in-the-cloud-with-sauce-labs</id>
+    <content type="html"><![CDATA[<p>Selenium is an awesome tool to run functional tests for web applications. One of the issues when creating browser tests is that some projects require a vast matrix of browsers/OS combinations and this means having a big infrastructure to support. That also means you have to maintain all the VMs by installing security patches and other required software updates.
+Sauce Labs provides over 400 browser/OS combinations in the cloud. All you have to do is specify which browser and OS version you want. The tests run the same way they would on a remote selenium server, except you have a wide variety of browsers and OSes to run your test against.
+If the tests fails or you just want to see what happened during the run, all you need to do is login to your Sauce Labs account and look at either the results log file or the video (yes, there is even a video!).
+Sauce Labs offers both free and paid plans. The paid plans basically work like a cell phone plan: you buy a certain number of minutes and use up those minutes to run your tests. All paid plans offer some level of concurrency, which can come in handy when you have a lot of browser tests to run. For instance, if you have 10 tests that take 1 minute each to run, you can execute the entire test suite in a minute by running 10 concurrent tests.
+Just like regular Selenium tests, you can code your tests in any of the supported <a href="http://docs.seleniumhq.org/about/platforms.jsp#programming-languages">languages</a>. Their documentation and their customer service are awesome and you can find lots of examples of how to run your tests in the cloud.
+Let&rsquo;s say you are testing the Wikipedia website and want to create a simple test to verify some content on a page. In Ruby, you would define a before block in your Rspec tests that launches a new browser window, using Sauce Labs as the remote server:
+<code>ruby
+before :each do
+    # launch the stuff
+    caps = Selenium::WebDriver::Remote::Capabilities.firefox
+    caps.platform = 'Linux'
+    caps.version = '26'
+    @driver = Selenium::WebDriver.for(
+        :remote,
+        :url =&gt;  "http://#{SAUCE_USERNAME}:#{SAUCE_KEY}@ondemand.saucelabs.com:80/wd/hub",
+        :desired_capabilities =&gt; caps)   
+    @driver.navigate.to 'http://www.wikipedia.org'
+  end
+</code>
+Make sure you define the constants for your username and API key (you can get those from your account page on saucelabs.com).
+After that, you are ready to write your first test:
+<code>ruby
+  it 'should find results for selenium' do
+    homepage = WikipediaHome.new(@driver)
+    homepage.search_for_something 'selenium'
+    expect(homepage.text.include?('atomic number')).to eq(true)
+  end
+</code>
+One important thing to keep in mind is that since ruby program is running on your local machine (sending commands to the remote webdriver in the cloud),
+you need to call Sauce Lab&rsquo;s API after each test is done and update the test name and the result:
+<code>ruby
+  after :each do |example|
+    @driver.quit
+    #update the sauce config settings after each test
+    RestClient.put "https://#{SAUCE_USERNAME}:#{SAUCE_KEY}@saucelabs.com/rest/v1/#{SAUCE_USERNAME}/jobs/#{@driver.session_id}",
+                   { name: example.full_description, passed: !example.exception }.to_json, :content_type =&gt; :json, :accept =&gt; :json
+  end
+</code>
+Modify the caps object on the before block to specify what browser and OS you want.</p>
+
+<h3>Conclusion</h3>
+
+<p>If you have a large number of automated web tests you need to run, but don&rsquo;t feel like spending a lot of time setting up a Selenium client infrastructure, checkout Sauce Labs to execute your tests in the cloud.<br/>
+<img src="/images/saucelabs.jpg"></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Selenium and the Page Object Design Pattern]]></title>
+    <link href="http://daudt.github.io/blog/2014/04/29/selenium-and-the-page-object-design-pattern/"/>
+    <updated>2014-04-29T22:20:15-06:00</updated>
+    <id>http://daudt.github.io/blog/2014/04/29/selenium-and-the-page-object-design-pattern</id>
+    <content type="html"><![CDATA[<p>Selenium is the most popular testing framework for web applications. It&rsquo;s free, open-source and very useful when trying to verify how your application will behave on a specific browser. As the <a href="http://www.seleniumhq.org">official website</a> states, &ldquo;Selenium automates browsers&rdquo;. Pretty simple.
+There are a couple different versions of the framework, but I highly recommend using Selenium WebDriver (or Selenium 2), which in my opinion is a lot more robust than the old Selenium IDE. Selenium WebDriver runs in many browsers and operating systems and can be controlled by many programming languages.
+For the purpose of this short tutorial, I&rsquo;m doing this on a Mac and using Ruby and Rspec to write the tests.</p>
+
+<h3>Why Page Objects?</h3>
+
+<p>A few years back when I started doing test automation, I wanted to automate as much as I could to save time, so I started writing a lot of code for the tests. I quickly realized that once the application changed (e.g. Element id changed), I had to go back and update all my tests that were now broken trying to identify a changed element on a page.
+By using the Page Object Design Pattern you basically abstract your application from your tests. That way if you have 50 tests for one page and some element changes, all you need to do is update the one page file, and all tests will continue to pass.</p>
+
+<h3>How does it work?</h3>
+
+<p>You could do this with any language supported by Selenium. Write code that builds a class that represents the page being tested with all identifiers and actions your tests need and then write your tests using that class. Fortunately, in Ruby you don&rsquo;t have to.
+Thanks to <a href="http://www.cheezyworld.com/2011/07/29/introducing-page-object-gem/">Jeff Morgan</a>, Ruby has an awesome gem that does most of the work for you when building page objects. Here&rsquo;s what your page object file should look like:</p>
+
+<pre><code class="ruby">require 'page-object'
+
+class LoginPage
+  include PageObject
+
+  page_url('https://vimeo.com/log_in')
+  text_field(:email, :id =&gt; 'email')
+  text_field(:password, :id =&gt; 'password')
+  button(:login_button, :css =&gt; 'input.btn')
+
+  def login(username, password)
+    self.email = username
+    self.password = password
+    self.login_button
+  end
+
+end
+</code></pre>
+
+<p>I&rsquo;m using the Vimeo login page here, but as long as you change the attributes of the page, it should work for any website that has login functionality.
+You&rsquo;ll find different opinions on this, but I believe asserts should not be part of page objects, as discussed on this <a href="http://stackoverflow.com/questions/11126806/page-object-model-why-not-include-assertions-in-page-methods">stackoverflow thread</a>.
+Once you created the page, you are now ready to write one or more tests:</p>
+
+<pre><code class="ruby">require 'rspec'
+require './login_page'
+require 'selenium-webdriver'
+
+describe 'User Login' do
+
+  before(:each) do
+    @browser = Selenium::WebDriver.for :firefox
+  end
+
+  it 'should login a valid user' do
+    login_page = LoginPage.new(@browser)
+    login_page.goto
+    login_page.login('my_email_address', 'my_password')
+    login_page.text.should include('Welcome home')
+  end
+
+  after(:each) do
+    @browser.quit
+  end
+
+end
+</code></pre>
+
+<p>By default, Selenium includes a driver for Firefox only (on the Mac). If you want to test using Chrome, you need to download <a href="https://code.google.com/p/selenium/wiki/ChromeDriver">ChromeDriver</a> and modify the line inside the <em>before</em> block:
+<code>ruby
+@browser = Selenium::WebDriver.for :chrome
+</code>
+Replace the strings inside the login method with your Vimeo username and password and run the test using rspec:</p>
+
+<pre><code class="ruby">rspec login_spec.rb
+.
+
+Finished in 9.7 seconds
+1 example, 0 failures
+</code></pre>
+
+<p><img src="/images/vimeo_login.jpg"></p>
+
+<p>If you need to interact with other elements on your page, make sure to checkout the wiki pages <a href="https://github.com/cheezy/page-object/wiki/Elements">here</a>.
+On the next post, I&rsquo;ll show you how to test virtually on any browser and operating system, using a cloud service.</p>
+]]></content>
+  </entry>
+  
+</feed>

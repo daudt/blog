@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Encryption | Rafael's Blog]]></title>
+  <link href="http://daudt.github.io/blog/categories/encryption/atom.xml" rel="self"/>
+  <link href="http://daudt.github.io/"/>
+  <updated>2015-12-20T16:04:06-07:00</updated>
+  <id>http://daudt.github.io/</id>
+  <author>
+    <name><![CDATA[Rafael Daudt]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Turducken Encryption]]></title>
+    <link href="http://daudt.github.io/blog/2014/04/21/turducken-encryption/"/>
+    <updated>2014-04-21T21:05:45-06:00</updated>
+    <id>http://daudt.github.io/blog/2014/04/21/turducken-encryption</id>
+    <content type="html"><![CDATA[<p>I recently got involved in a project where the client had very specific security requirements. Within the very comprehensive security document given to us, there was a section about encryption. All the web service requests that involved PII needed to be encrypted with <a href="http://en.wikipedia.org/wiki/Pretty_Good_Privacy">PGP</a>. On top of that, all the requests needed to happen over SSL (yeah, I know&hellip;). Ironically, this implementation happened a few weeks before the Heartbleed Bug was discovered, so maybe the client wasn&rsquo;t that paranoid after all.
+The client software was running on an iPad, and the development team had a hard time finding an iOS encryption library that was compatible with the other pieces. After a few failed attempts, we decided to switch the encryption mechanism to a combination of AES and RSA, which made our lives easier.
+I believe tests should be simple and avoid duplicating logic existent in the system under test. The problem is that when you are testing something that requires an encrypted input, unless you can provide that, you are not going to get any valid outputs.
+Since all my tests were written in Ruby using Rspec, I had to come up with some Ruby code that could encrypt and decrypt JSON data.
+The encryption algorithm we used was based on <a href="http://www.ietf.org/rfc/rfc3394.txt">RFC3394</a> and it&rsquo;s basically an AES encrypted message, where the encryption key is then asymmetrically encrypted with an RSA key.</p>
+
+<h3>Let&rsquo;s get coding</h3>
+
+<pre><code class="ruby">require 'openssl'
+require 'base64'
+
+module EnvelopeEncryption
+
+  def encrypt(plaintext, rsa_key, url_safe=true)
+    aes = OpenSSL::Cipher.new('AES-256-CBC')
+    aes.encrypt
+    iv = aes.random_iv
+    session_key = aes.random_key
+    # encrypt the payload with session key
+    ciphertext = aes.update(plaintext) + aes.final
+</code></pre>
+
+<p>At this point the message is encrypted with a random 32 byte key (256 bits) and a 16 byte initialization vector. Since these two are random  on each session, it makes it harder for the key to be cracked.
+Next we need to encrypt the random session key with a 2048 bit RSA key:</p>
+
+<pre><code class="ruby">  encrypted_session_key = rsa_key.public_encrypt(session_key)
+</code></pre>
+
+<p>Now comes the tricky part. The web service is expecting some binary data in a specific format:
+4 bytes + encrypted key + 4 bytes + iv + ciphertext.
+The first 4 bytes represent the size of the encrypted key. The 4 bytes after the key, represent the size of the initialization vector. Also the size representations need to be in 8 bit unsigned big-endian format. We can accomplish this with Ruby&rsquo;s <a href="http://www.ruby-doc.org/core-2.1.1/Array.html#method-i-pack">pack</a> method for arrays.
+<code>ruby
+  encrypted_body = [encrypted_session_key.size].pack('L&gt;')
+  encrypted_body &lt;&lt; encrypted_session_key
+  encrypted_body &lt;&lt; [iv.size].pack('L&gt;')
+  encrypted_body &lt;&lt; iv
+  encrypted_body &lt;&lt; ciphertext
+</code>
+Now we base64 encode the whole thing and return it:
+<code>ruby
+  if url_safe
+    Base64.urlsafe_encode64(encrypted_body)
+  else
+    Base64.encode64(encrypted_body)
+  end
+end
+</code></p>
+
+<p>Since the server is sending us an encrypted response, we also need to create another method to do the reverse:</p>
+
+<pre><code class="ruby">  def decrypt(encoded_byte_stream, rsa_key)
+    byte_stream = Base64.urlsafe_decode64(encoded_byte_stream)
+    key_size = byte_stream.byteslice(0,3)
+    encrypted_session_key = byte_stream.byteslice(4,key_size)
+    iv_size = byte_stream.byteslice(key_size+4,4).unpack('L&gt;')[0]
+    iv = byte_stream.byteslice(key_size+8,iv_size)
+    ciphertext = byte_stream.byteslice(key_size+8+iv_size, byte_stream.size - key_size+8+iv_size)
+    session_key = rsa_key.private_decrypt(encrypted_session_key)
+    # Final decryption
+    aes = OpenSSL::Cipher.new('AES-256-CBC')
+    aes.decrypt
+    aes.iv = iv
+    aes.key = session_key
+    aes.update(ciphertext) + aes.final
+  end
+</code></pre>
+
+<p>Let&rsquo;s test it to make sure it works:</p>
+
+<pre><code class="ruby">require 'encryption'
+
+describe 'Turducken' do
+  include EnvelopeEncryption
+
+  it 'should be able to encrypt/decrypt something' do
+    key = OpenSSL::PKey::RSA.new(File.read('private.pem'))
+    plain = 'The package has been delivered.'
+    encrypted = encrypt(plain, key)
+    decrypt(encrypted, key).should == plain
+  end
+end
+</code></pre>
+
+<hr />
+
+<h3>Conclusion</h3>
+
+<p>Most of the tests I wrote validated the responses and the JSON data being returned (e.g. When a customer gets created). This is probably more code than one wishes to write when creating tests for a web service, but it&rsquo;s a good exercise to understand how AES key wrapping works and how to validate the encryption.</p>
+]]></content>
+  </entry>
+  
+</feed>

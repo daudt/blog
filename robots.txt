@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: 
+
+Sitemap: http://daudt.github.io/sitemap.xml 

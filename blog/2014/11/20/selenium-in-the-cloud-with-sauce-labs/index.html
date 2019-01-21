@@ -1,0 +1,320 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Selenium in the Cloud With Sauce Labs - Rafael's Blog</title>
+  <meta name="author" content="Rafael Daudt">
+
+  
+  <meta name="description" content="run your selenium tests in the cloud with ruby and saucelabs">
+  <meta name="keywords" content="ruby, selenium, automation, cloud, saucelabs">
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="msvalidate.01" content="457C3E1BBE6C8720B83FCDE7BAD07F3E" />
+
+  
+  <link rel="canonical" href="http://daudt.github.io/blog/2014/11/20/selenium-in-the-cloud-with-sauce-labs">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Rafael's Blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-50554703-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Rafael's Blog</a></h1>
+  
+    <h2>Because manual testing is boring.</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:daudt.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Selenium in the Cloud With Sauce Labs</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2014-11-20T17:37:00-07:00'><span class='date'><span class='date-month'>Nov</span> <span class='date-day'>20</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>5:37 pm</span></time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Selenium is an awesome tool to run functional tests for web applications. One of the issues when creating browser tests is that some projects require a vast matrix of browsers/OS combinations and this means having a big infrastructure to support. That also means you have to maintain all the VMs by installing security patches and other required software updates.
+Sauce Labs provides over 400 browser/OS combinations in the cloud. All you have to do is specify which browser and OS version you want. The tests run the same way they would on a remote selenium server, except you have a wide variety of browsers and OSes to run your test against.
+If the tests fails or you just want to see what happened during the run, all you need to do is login to your Sauce Labs account and look at either the results log file or the video (yes, there is even a video!).
+Sauce Labs offers both free and paid plans. The paid plans basically work like a cell phone plan: you buy a certain number of minutes and use up those minutes to run your tests. All paid plans offer some level of concurrency, which can come in handy when you have a lot of browser tests to run. For instance, if you have 10 tests that take 1 minute each to run, you can execute the entire test suite in a minute by running 10 concurrent tests.
+Just like regular Selenium tests, you can code your tests in any of the supported <a href="http://docs.seleniumhq.org/about/platforms.jsp#programming-languages">languages</a>. Their documentation and their customer service are awesome and you can find lots of examples of how to run your tests in the cloud.
+Let&rsquo;s say you are testing the Wikipedia website and want to create a simple test to verify some content on a page. In Ruby, you would define a before block in your Rspec tests that launches a new browser window, using Sauce Labs as the remote server:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">before</span> <span class="ss">:each</span> <span class="k">do</span>
+</span><span class='line'>    <span class="c1"># launch the stuff</span>
+</span><span class='line'>    <span class="n">caps</span> <span class="o">=</span> <span class="no">Selenium</span><span class="o">::</span><span class="no">WebDriver</span><span class="o">::</span><span class="no">Remote</span><span class="o">::</span><span class="no">Capabilities</span><span class="o">.</span><span class="n">firefox</span>
+</span><span class='line'>    <span class="n">caps</span><span class="o">.</span><span class="n">platform</span> <span class="o">=</span> <span class="s1">&#39;Linux&#39;</span>
+</span><span class='line'>    <span class="n">caps</span><span class="o">.</span><span class="n">version</span> <span class="o">=</span> <span class="s1">&#39;26&#39;</span>
+</span><span class='line'>    <span class="vi">@driver</span> <span class="o">=</span> <span class="no">Selenium</span><span class="o">::</span><span class="no">WebDriver</span><span class="o">.</span><span class="n">for</span><span class="p">(</span>
+</span><span class='line'>        <span class="ss">:remote</span><span class="p">,</span>
+</span><span class='line'>        <span class="ss">:url</span> <span class="o">=&gt;</span>  <span class="s2">&quot;http://</span><span class="si">#{</span><span class="no">SAUCE_USERNAME</span><span class="si">}</span><span class="s2">:</span><span class="si">#{</span><span class="no">SAUCE_KEY</span><span class="si">}</span><span class="s2">@ondemand.saucelabs.com:80/wd/hub&quot;</span><span class="p">,</span>
+</span><span class='line'>        <span class="ss">:desired_capabilities</span> <span class="o">=&gt;</span> <span class="n">caps</span><span class="p">)</span>
+</span><span class='line'>    <span class="vi">@driver</span><span class="o">.</span><span class="n">navigate</span><span class="o">.</span><span class="n">to</span> <span class="s1">&#39;http://www.wikipedia.org&#39;</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Make sure you define the constants for your username and API key (you can get those from your account page on saucelabs.com).
+After that, you are ready to write your first test:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">it</span> <span class="s1">&#39;should find results for selenium&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">homepage</span> <span class="o">=</span> <span class="no">WikipediaHome</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="vi">@driver</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">homepage</span><span class="o">.</span><span class="n">search_for_something</span> <span class="s1">&#39;selenium&#39;</span>
+</span><span class='line'>    <span class="n">expect</span><span class="p">(</span><span class="n">homepage</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="s1">&#39;atomic number&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">to</span> <span class="n">eq</span><span class="p">(</span><span class="kp">true</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>One important thing to keep in mind is that since ruby program is running on your local machine (sending commands to the remote webdriver in the cloud),
+you need to call Sauce Lab&rsquo;s API after each test is done and update the test name and the result:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">after</span> <span class="ss">:each</span> <span class="k">do</span> <span class="o">|</span><span class="n">example</span><span class="o">|</span>
+</span><span class='line'>    <span class="vi">@driver</span><span class="o">.</span><span class="n">quit</span>
+</span><span class='line'>    <span class="c1">#update the sauce config settings after each test</span>
+</span><span class='line'>    <span class="no">RestClient</span><span class="o">.</span><span class="n">put</span> <span class="s2">&quot;https://</span><span class="si">#{</span><span class="no">SAUCE_USERNAME</span><span class="si">}</span><span class="s2">:</span><span class="si">#{</span><span class="no">SAUCE_KEY</span><span class="si">}</span><span class="s2">@saucelabs.com/rest/v1/</span><span class="si">#{</span><span class="no">SAUCE_USERNAME</span><span class="si">}</span><span class="s2">/jobs/</span><span class="si">#{</span><span class="vi">@driver</span><span class="o">.</span><span class="n">session_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+</span><span class='line'>                   <span class="p">{</span> <span class="nb">name</span><span class="p">:</span> <span class="n">example</span><span class="o">.</span><span class="n">full_description</span><span class="p">,</span> <span class="ss">passed</span><span class="p">:</span> <span class="o">!</span><span class="n">example</span><span class="o">.</span><span class="n">exception</span> <span class="p">}</span><span class="o">.</span><span class="n">to_json</span><span class="p">,</span> <span class="ss">:content_type</span> <span class="o">=&gt;</span> <span class="ss">:json</span><span class="p">,</span> <span class="ss">:accept</span> <span class="o">=&gt;</span> <span class="ss">:json</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Modify the caps object on the before block to specify what browser and OS you want.</p>
+
+<h3>Conclusion</h3>
+
+<p>If you have a large number of automated web tests you need to run, but don&rsquo;t feel like spending a lot of time setting up a Selenium client infrastructure, checkout Sauce Labs to execute your tests in the cloud.<br/>
+<img src="/images/saucelabs.jpg"></p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Rafael Daudt</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2014-11-20T17:37:00-07:00'><span class='date'><span class='date-month'>Nov</span> <span class='date-day'>20</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>5:37 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/automation/'>automation</a>, <a class='category' href='/blog/categories/cloud/'>cloud</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>, <a class='category' href='/blog/categories/selenium/'>selenium</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://daudt.github.io/blog/2014/11/20/selenium-in-the-cloud-with-sauce-labs/" data-via="rafaeldaudt" data-counturl="http://daudt.github.io/blog/2014/11/20/selenium-in-the-cloud-with-sauce-labs/" >Tweet</a>
+  
+  
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/09/29/testing-third-party-web-services-with-ruby/" title="Previous Post: Testing Third Party Web Services with Ruby">&laquo; Testing Third Party Web Services with Ruby</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/11/20/selenium-in-the-cloud-with-sauce-labs/">Selenium in the Cloud With Sauce Labs</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/09/29/testing-third-party-web-services-with-ruby/">Testing Third Party Web Services With Ruby</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/05/28/java-automation-not-that-kind-of-java/">Java Automation (Not That Kind of Java)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/29/selenium-and-the-page-object-design-pattern/">Selenium and the Page Object Design Pattern</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/21/turducken-encryption/">Turducken Encryption</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - Rafael Daudt -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'testrepo';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://daudt.github.io/blog/2014/11/20/selenium-in-the-cloud-with-sauce-labs/';
+        var disqus_url = 'http://daudt.github.io/blog/2014/11/20/selenium-in-the-cloud-with-sauce-labs/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#appId=212934732101925&xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

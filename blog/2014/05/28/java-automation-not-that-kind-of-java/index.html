@@ -1,0 +1,285 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Java Automation (Not That Kind of Java) - Rafael's Blog</title>
+  <meta name="author" content="Rafael Daudt">
+
+  
+  <meta name="description" content="how to use arduino to do some home automation">
+  <meta name="keywords" content="arduino,automation,coffee,java">
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="msvalidate.01" content="457C3E1BBE6C8720B83FCDE7BAD07F3E" />
+
+  
+  <link rel="canonical" href="http://daudt.github.io/blog/2014/05/28/java-automation-not-that-kind-of-java">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Rafael's Blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-50554703-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Rafael's Blog</a></h1>
+  
+    <h2>Because manual testing is boring.</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:daudt.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Java Automation (Not That Kind of Java)</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2014-05-28T22:35:06-06:00'><span class='date'><span class='date-month'>May</span> <span class='date-day'>28</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>10:35 pm</span></time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>I love automating things. Automating tests can save you lots of time during regression and make for testing less tedious. Automating your morning can also save you time and be fun. A friend of mine once told me that since I love automation so much, he would not be surprised if I would one day automate my coffee brewing in the morning (yes, that Java). So here it goes, Bryan.
+Sure, programmable coffee makers have been around for a while and they are fairly inexpensive. But I didn&rsquo;t want to be a slave of the machine and have to wake up at 6 a.m. because that&rsquo;s the time the coffee pot was programmed to. I wanted to get my cup of coffee brewed fresh as soon as I walked in the office (which can occur within a window of a couple of hours).</p>
+
+<h2>How?</h2>
+
+<p>I bought the cheapest coffee maker I could find, because I wanted something that had only an on/off switch. You can find one of these at Walmart or Target. Looking back I probably would have chosen a model that has an auto shut off feature.
+To build the remote controlled circuit here is what you&rsquo;ll need:</p>
+
+<ul>
+<li>Relay control kit from <a href="https://www.sparkfun.com/products/11042">Sparkfun</a></li>
+<li>Arduino <a href="http://arduino.cc/en/Main/arduinoBoardUno">Uno</a> board - Sparkfun also carry these.</li>
+<li>Arduino <a href="http://arduino.cc/en/Main/ArduinoEthernetShield">Ethernet</a> shield.</li>
+</ul>
+
+
+<p>This <a href="http://www.instructables.com/id/Arduino-Controlled-Relay-Box/?ALLSTEPS">link</a> shows how to assemble the relay control kit and putting all inside a neat little outlet box like mine. You can find the case and outlet at your nearest hardware store.</p>
+
+<p><img src="/images/IMG_1639_web.jpg"></p>
+
+<p>The missing piece on the tutorial above is that you need to make your Arduino talk with the interwebs and listen for requests. That might sound like it&rsquo;s complicated, but in fact it&rsquo;s way easier than you think. Thanks to a service called Teleduino, this setup works through firewalls and internet routers, since the Arduino will first connect to the Teleduino service and then wait for requests.
+Once you request an access key on the Teleduino <a href="https://www.teleduino.org/">website</a>, you need to tell the service which pin you want to use, by making a simple http call:</p>
+
+<p><a href="http://us01.proxy.teleduino.org/api/1.0/328.php?k=MY_KEY&amp;r=definePinMode&amp;pin=4&amp;mode=1">http://us01.proxy.teleduino.org/api/1.0/328.php?k=MY_KEY&amp;r=definePinMode&amp;pin=4&amp;mode=1</a></p>
+
+<p>You&rsquo;ll need to replace &lsquo;MY_KEY&rsquo; with the access key you got, plus modify the pin number to match the pin connected to the signal wire on the Arduino (pin 4 on my example). You only need to make this call once after the Arduino is online.
+Then a second call specifies if you want the pin to be on or off (0 or 1):</p>
+
+<p><a href="http://us01.proxy.teleduino.org/api/1.0/328.php?k=MY_KEY&amp;r=setDigitalOutput&amp;pin=4&amp;output=1">http://us01.proxy.teleduino.org/api/1.0/328.php?k=MY_KEY&amp;r=setDigitalOutput&amp;pin=4&amp;output=1</a></p>
+
+<p>Change the last parameter to 0 if you want to turn the coffee maker off.</p>
+
+<iframe width="640" height="360" src="//www.youtube.com/embed/fMeuRK8zDaw" frameborder="0" allowfullscreen></iframe>
+
+
+<p>Ideally, you would have a mobile app of some sort that would have these service calls built in. That&rsquo;s next on the list. Also, version 2.0 of this project needs to have some extra capabilities like grinding the beans and filling the water automatically. Stay tuned.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Rafael Daudt</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2014-05-28T22:35:06-06:00'><span class='date'><span class='date-month'>May</span> <span class='date-day'>28</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>10:35 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/arduino/'>arduino</a>, <a class='category' href='/blog/categories/automation/'>automation</a>, <a class='category' href='/blog/categories/coffee/'>coffee</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://daudt.github.io/blog/2014/05/28/java-automation-not-that-kind-of-java/" data-via="rafaeldaudt" data-counturl="http://daudt.github.io/blog/2014/05/28/java-automation-not-that-kind-of-java/" >Tweet</a>
+  
+  
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/04/29/selenium-and-the-page-object-design-pattern/" title="Previous Post: Selenium and the Page Object Design Pattern">&laquo; Selenium and the Page Object Design Pattern</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2014/09/29/testing-third-party-web-services-with-ruby/" title="Next Post: Testing Third Party Web Services with Ruby">Testing Third Party Web Services with Ruby &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/11/20/selenium-in-the-cloud-with-sauce-labs/">Selenium in the Cloud With Sauce Labs</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/09/29/testing-third-party-web-services-with-ruby/">Testing Third Party Web Services With Ruby</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/05/28/java-automation-not-that-kind-of-java/">Java Automation (Not That Kind of Java)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/29/selenium-and-the-page-object-design-pattern/">Selenium and the Page Object Design Pattern</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/21/turducken-encryption/">Turducken Encryption</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - Rafael Daudt -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'testrepo';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://daudt.github.io/blog/2014/05/28/java-automation-not-that-kind-of-java/';
+        var disqus_url = 'http://daudt.github.io/blog/2014/05/28/java-automation-not-that-kind-of-java/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#appId=212934732101925&xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

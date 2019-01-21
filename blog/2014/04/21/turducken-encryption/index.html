@@ -1,0 +1,394 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Turducken Encryption - Rafael's Blog</title>
+  <meta name="author" content="Rafael Daudt">
+
+  
+  <meta name="description" content="how you can use ruby to test restful services that require encryption for requests and reponses">
+  <meta name="keywords" content="ruby,test,automation,security,encryption,rsa,aes">
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="msvalidate.01" content="457C3E1BBE6C8720B83FCDE7BAD07F3E" />
+
+  
+  <link rel="canonical" href="http://daudt.github.io/blog/2014/04/21/turducken-encryption">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Rafael's Blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-50554703-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Rafael's Blog</a></h1>
+  
+    <h2>Because manual testing is boring.</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:daudt.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Turducken Encryption</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2014-04-21T21:05:45-06:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>21</span><span class='date-suffix'>st</span>, <span class='date-year'>2014</span></span> <span class='time'>9:05 pm</span></time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>I recently got involved in a project where the client had very specific security requirements. Within the very comprehensive security document given to us, there was a section about encryption. All the web service requests that involved PII needed to be encrypted with <a href="http://en.wikipedia.org/wiki/Pretty_Good_Privacy">PGP</a>. On top of that, all the requests needed to happen over SSL (yeah, I know&hellip;). Ironically, this implementation happened a few weeks before the Heartbleed Bug was discovered, so maybe the client wasn&rsquo;t that paranoid after all.
+The client software was running on an iPad, and the development team had a hard time finding an iOS encryption library that was compatible with the other pieces. After a few failed attempts, we decided to switch the encryption mechanism to a combination of AES and RSA, which made our lives easier.
+I believe tests should be simple and avoid duplicating logic existent in the system under test. The problem is that when you are testing something that requires an encrypted input, unless you can provide that, you are not going to get any valid outputs.
+Since all my tests were written in Ruby using Rspec, I had to come up with some Ruby code that could encrypt and decrypt JSON data.
+The encryption algorithm we used was based on <a href="http://www.ietf.org/rfc/rfc3394.txt">RFC3394</a> and it&rsquo;s basically an AES encrypted message, where the encryption key is then asymmetrically encrypted with an RSA key.</p>
+
+<h3>Let&rsquo;s get coding</h3>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s1">&#39;openssl&#39;</span>
+</span><span class='line'><span class="nb">require</span> <span class="s1">&#39;base64&#39;</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">module</span> <span class="nn">EnvelopeEncryption</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">encrypt</span><span class="p">(</span><span class="n">plaintext</span><span class="p">,</span> <span class="n">rsa_key</span><span class="p">,</span> <span class="n">url_safe</span><span class="o">=</span><span class="kp">true</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">aes</span> <span class="o">=</span> <span class="no">OpenSSL</span><span class="o">::</span><span class="no">Cipher</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;AES-256-CBC&#39;</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">aes</span><span class="o">.</span><span class="n">encrypt</span>
+</span><span class='line'>    <span class="n">iv</span> <span class="o">=</span> <span class="n">aes</span><span class="o">.</span><span class="n">random_iv</span>
+</span><span class='line'>    <span class="n">session_key</span> <span class="o">=</span> <span class="n">aes</span><span class="o">.</span><span class="n">random_key</span>
+</span><span class='line'>    <span class="c1"># encrypt the payload with session key</span>
+</span><span class='line'>    <span class="n">ciphertext</span> <span class="o">=</span> <span class="n">aes</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">plaintext</span><span class="p">)</span> <span class="o">+</span> <span class="n">aes</span><span class="o">.</span><span class="n">final</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>At this point the message is encrypted with a random 32 byte key (256 bits) and a 16 byte initialization vector. Since these two are random  on each session, it makes it harder for the key to be cracked.
+Next we need to encrypt the random session key with a 2048 bit RSA key:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">encrypted_session_key</span> <span class="o">=</span> <span class="n">rsa_key</span><span class="o">.</span><span class="n">public_encrypt</span><span class="p">(</span><span class="n">session_key</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now comes the tricky part. The web service is expecting some binary data in a specific format:
+4 bytes + encrypted key + 4 bytes + iv + ciphertext.
+The first 4 bytes represent the size of the encrypted key. The 4 bytes after the key, represent the size of the initialization vector. Also the size representations need to be in 8 bit unsigned big-endian format. We can accomplish this with Ruby&rsquo;s <a href="http://www.ruby-doc.org/core-2.1.1/Array.html#method-i-pack">pack</a> method for arrays.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">encrypted_body</span> <span class="o">=</span> <span class="o">[</span><span class="n">encrypted_session_key</span><span class="o">.</span><span class="n">size</span><span class="o">].</span><span class="n">pack</span><span class="p">(</span><span class="s1">&#39;L&gt;&#39;</span><span class="p">)</span>
+</span><span class='line'>  <span class="n">encrypted_body</span> <span class="o">&lt;&lt;</span> <span class="n">encrypted_session_key</span>
+</span><span class='line'>  <span class="n">encrypted_body</span> <span class="o">&lt;&lt;</span> <span class="o">[</span><span class="n">iv</span><span class="o">.</span><span class="n">size</span><span class="o">].</span><span class="n">pack</span><span class="p">(</span><span class="s1">&#39;L&gt;&#39;</span><span class="p">)</span>
+</span><span class='line'>  <span class="n">encrypted_body</span> <span class="o">&lt;&lt;</span> <span class="n">iv</span>
+</span><span class='line'>  <span class="n">encrypted_body</span> <span class="o">&lt;&lt;</span> <span class="n">ciphertext</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now we base64 encode the whole thing and return it:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">if</span> <span class="n">url_safe</span>
+</span><span class='line'>    <span class="no">Base64</span><span class="o">.</span><span class="n">urlsafe_encode64</span><span class="p">(</span><span class="n">encrypted_body</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">else</span>
+</span><span class='line'>    <span class="no">Base64</span><span class="o">.</span><span class="n">encode64</span><span class="p">(</span><span class="n">encrypted_body</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Since the server is sending us an encrypted response, we also need to create another method to do the reverse:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">def</span> <span class="nf">decrypt</span><span class="p">(</span><span class="n">encoded_byte_stream</span><span class="p">,</span> <span class="n">rsa_key</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">byte_stream</span> <span class="o">=</span> <span class="no">Base64</span><span class="o">.</span><span class="n">urlsafe_decode64</span><span class="p">(</span><span class="n">encoded_byte_stream</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">key_size</span> <span class="o">=</span> <span class="n">byte_stream</span><span class="o">.</span><span class="n">byteslice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">encrypted_session_key</span> <span class="o">=</span> <span class="n">byte_stream</span><span class="o">.</span><span class="n">byteslice</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="n">key_size</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">iv_size</span> <span class="o">=</span> <span class="n">byte_stream</span><span class="o">.</span><span class="n">byteslice</span><span class="p">(</span><span class="n">key_size</span><span class="o">+</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;L&gt;&#39;</span><span class="p">)</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span>
+</span><span class='line'>    <span class="n">iv</span> <span class="o">=</span> <span class="n">byte_stream</span><span class="o">.</span><span class="n">byteslice</span><span class="p">(</span><span class="n">key_size</span><span class="o">+</span><span class="mi">8</span><span class="p">,</span><span class="n">iv_size</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">ciphertext</span> <span class="o">=</span> <span class="n">byte_stream</span><span class="o">.</span><span class="n">byteslice</span><span class="p">(</span><span class="n">key_size</span><span class="o">+</span><span class="mi">8</span><span class="o">+</span><span class="n">iv_size</span><span class="p">,</span> <span class="n">byte_stream</span><span class="o">.</span><span class="n">size</span> <span class="o">-</span> <span class="n">key_size</span><span class="o">+</span><span class="mi">8</span><span class="o">+</span><span class="n">iv_size</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">session_key</span> <span class="o">=</span> <span class="n">rsa_key</span><span class="o">.</span><span class="n">private_decrypt</span><span class="p">(</span><span class="n">encrypted_session_key</span><span class="p">)</span>
+</span><span class='line'>    <span class="c1"># Final decryption</span>
+</span><span class='line'>    <span class="n">aes</span> <span class="o">=</span> <span class="no">OpenSSL</span><span class="o">::</span><span class="no">Cipher</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;AES-256-CBC&#39;</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">aes</span><span class="o">.</span><span class="n">decrypt</span>
+</span><span class='line'>    <span class="n">aes</span><span class="o">.</span><span class="n">iv</span> <span class="o">=</span> <span class="n">iv</span>
+</span><span class='line'>    <span class="n">aes</span><span class="o">.</span><span class="n">key</span> <span class="o">=</span> <span class="n">session_key</span>
+</span><span class='line'>    <span class="n">aes</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">ciphertext</span><span class="p">)</span> <span class="o">+</span> <span class="n">aes</span><span class="o">.</span><span class="n">final</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Let&rsquo;s test it to make sure it works:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s1">&#39;encryption&#39;</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">describe</span> <span class="s1">&#39;Turducken&#39;</span> <span class="k">do</span>
+</span><span class='line'>  <span class="kp">include</span> <span class="no">EnvelopeEncryption</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">it</span> <span class="s1">&#39;should be able to encrypt/decrypt something&#39;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">key</span> <span class="o">=</span> <span class="no">OpenSSL</span><span class="o">::</span><span class="no">PKey</span><span class="o">::</span><span class="no">RSA</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="s1">&#39;private.pem&#39;</span><span class="p">))</span>
+</span><span class='line'>    <span class="n">plain</span> <span class="o">=</span> <span class="s1">&#39;The package has been delivered.&#39;</span>
+</span><span class='line'>    <span class="n">encrypted</span> <span class="o">=</span> <span class="n">encrypt</span><span class="p">(</span><span class="n">plain</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">decrypt</span><span class="p">(</span><span class="n">encrypted</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">should</span> <span class="o">==</span> <span class="n">plain</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<hr />
+
+<h3>Conclusion</h3>
+
+<p>Most of the tests I wrote validated the responses and the JSON data being returned (e.g. When a customer gets created). This is probably more code than one wishes to write when creating tests for a web service, but it&rsquo;s a good exercise to understand how AES key wrapping works and how to validate the encryption.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Rafael Daudt</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2014-04-21T21:05:45-06:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>21</span><span class='date-suffix'>st</span>, <span class='date-year'>2014</span></span> <span class='time'>9:05 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/automation/'>automation</a>, <a class='category' href='/blog/categories/encryption/'>encryption</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>, <a class='category' href='/blog/categories/security/'>security</a>, <a class='category' href='/blog/categories/testing/'>testing</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://daudt.github.io/blog/2014/04/21/turducken-encryption/" data-via="rafaeldaudt" data-counturl="http://daudt.github.io/blog/2014/04/21/turducken-encryption/" >Tweet</a>
+  
+  
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <p class="meta">
+      
+      
+        <a class="basic-alignment right" href="/blog/2014/04/29/selenium-and-the-page-object-design-pattern/" title="Next Post: Selenium and the Page Object Design Pattern">Selenium and the Page Object Design Pattern &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/11/20/selenium-in-the-cloud-with-sauce-labs/">Selenium in the Cloud With Sauce Labs</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/09/29/testing-third-party-web-services-with-ruby/">Testing Third Party Web Services With Ruby</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/05/28/java-automation-not-that-kind-of-java/">Java Automation (Not That Kind of Java)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/29/selenium-and-the-page-object-design-pattern/">Selenium and the Page Object Design Pattern</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/21/turducken-encryption/">Turducken Encryption</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - Rafael Daudt -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'testrepo';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://daudt.github.io/blog/2014/04/21/turducken-encryption/';
+        var disqus_url = 'http://daudt.github.io/blog/2014/04/21/turducken-encryption/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#appId=212934732101925&xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

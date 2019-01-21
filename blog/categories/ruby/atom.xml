@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Ruby | Rafael's Blog]]></title>
+  <link href="http://daudt.github.io/blog/categories/ruby/atom.xml" rel="self"/>
+  <link href="http://daudt.github.io/"/>
+  <updated>2015-12-20T16:04:06-07:00</updated>
+  <id>http://daudt.github.io/</id>
+  <author>
+    <name><![CDATA[Rafael Daudt]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Selenium in the Cloud With Sauce Labs]]></title>
+    <link href="http://daudt.github.io/blog/2014/11/20/selenium-in-the-cloud-with-sauce-labs/"/>
+    <updated>2014-11-20T17:37:00-07:00</updated>
+    <id>http://daudt.github.io/blog/2014/11/20/selenium-in-the-cloud-with-sauce-labs</id>
+    <content type="html"><![CDATA[<p>Selenium is an awesome tool to run functional tests for web applications. One of the issues when creating browser tests is that some projects require a vast matrix of browsers/OS combinations and this means having a big infrastructure to support. That also means you have to maintain all the VMs by installing security patches and other required software updates.
+Sauce Labs provides over 400 browser/OS combinations in the cloud. All you have to do is specify which browser and OS version you want. The tests run the same way they would on a remote selenium server, except you have a wide variety of browsers and OSes to run your test against.
+If the tests fails or you just want to see what happened during the run, all you need to do is login to your Sauce Labs account and look at either the results log file or the video (yes, there is even a video!).
+Sauce Labs offers both free and paid plans. The paid plans basically work like a cell phone plan: you buy a certain number of minutes and use up those minutes to run your tests. All paid plans offer some level of concurrency, which can come in handy when you have a lot of browser tests to run. For instance, if you have 10 tests that take 1 minute each to run, you can execute the entire test suite in a minute by running 10 concurrent tests.
+Just like regular Selenium tests, you can code your tests in any of the supported <a href="http://docs.seleniumhq.org/about/platforms.jsp#programming-languages">languages</a>. Their documentation and their customer service are awesome and you can find lots of examples of how to run your tests in the cloud.
+Let&rsquo;s say you are testing the Wikipedia website and want to create a simple test to verify some content on a page. In Ruby, you would define a before block in your Rspec tests that launches a new browser window, using Sauce Labs as the remote server:
+<code>ruby
+before :each do
+    # launch the stuff
+    caps = Selenium::WebDriver::Remote::Capabilities.firefox
+    caps.platform = 'Linux'
+    caps.version = '26'
+    @driver = Selenium::WebDriver.for(
+        :remote,
+        :url =&gt;  "http://#{SAUCE_USERNAME}:#{SAUCE_KEY}@ondemand.saucelabs.com:80/wd/hub",
+        :desired_capabilities =&gt; caps)   
+    @driver.navigate.to 'http://www.wikipedia.org'
+  end
+</code>
+Make sure you define the constants for your username and API key (you can get those from your account page on saucelabs.com).
+After that, you are ready to write your first test:
+<code>ruby
+  it 'should find results for selenium' do
+    homepage = WikipediaHome.new(@driver)
+    homepage.search_for_something 'selenium'
+    expect(homepage.text.include?('atomic number')).to eq(true)
+  end
+</code>
+One important thing to keep in mind is that since ruby program is running on your local machine (sending commands to the remote webdriver in the cloud),
+you need to call Sauce Lab&rsquo;s API after each test is done and update the test name and the result:
+<code>ruby
+  after :each do |example|
+    @driver.quit
+    #update the sauce config settings after each test
+    RestClient.put "https://#{SAUCE_USERNAME}:#{SAUCE_KEY}@saucelabs.com/rest/v1/#{SAUCE_USERNAME}/jobs/#{@driver.session_id}",
+                   { name: example.full_description, passed: !example.exception }.to_json, :content_type =&gt; :json, :accept =&gt; :json
+  end
+</code>
+Modify the caps object on the before block to specify what browser and OS you want.</p>
+
+<h3>Conclusion</h3>
+
+<p>If you have a large number of automated web tests you need to run, but don&rsquo;t feel like spending a lot of time setting up a Selenium client infrastructure, checkout Sauce Labs to execute your tests in the cloud.<br/>
+<img src="/images/saucelabs.jpg"></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Testing Third Party Web Services With Ruby]]></title>
+    <link href="http://daudt.github.io/blog/2014/09/29/testing-third-party-web-services-with-ruby/"/>
+    <updated>2014-09-29T17:51:59-06:00</updated>
+    <id>http://daudt.github.io/blog/2014/09/29/testing-third-party-web-services-with-ruby</id>
+    <content type="html"><![CDATA[<p>Testing RESTful services can be a very tedious task if you have to do it manually. Sure, there are browser plugins like Postman and Rest Console, but if you have a large amount of tests you want to execute with every build, that approach might not be very practical.
+Ruby has a lot of cool gems you can use to accomplish that. One of my favorite ones is <a href="https://github.com/rest-client/rest-client">RestClient</a>.
+Combine that with the Ruby&rsquo;s Rspec framework and you can write very powerful tests.
+Let&rsquo;s say Github wanted you to test their RESTful API for them. First thing you&rsquo;d probably want to do is make sure endpoints are returning the response codes you are expecting.
+To start, make sure you have the proper gems installed. Using bundler is the quickest way to do that:</p>
+
+<pre><code class="ruby">source "https://rubygems.org"
+
+gem 'rest-client'
+gem 'rspec'
+gem 'json_expressions'
+</code></pre>
+
+<p>Now run &lsquo;bundle&rsquo; on the same directory where you created the file.
+<code>bash
+rafs-computer:rafael$ bundle
+Using diff-lcs 1.2.5
+Using json_expressions 0.8.3
+Using mime-types 2.3
+Using netrc 0.7.7
+Using rest-client 1.7.2
+Using rspec-support 3.1.1
+Using rspec-core 3.1.4
+Using rspec-expectations 3.1.2
+Using rspec-mocks 3.1.2
+Using rspec 3.1.0
+Using bundler 1.7.3
+Your bundle is complete!
+</code>
+Now let&rsquo;s validate that we are getting 200 response from the users endpoint:</p>
+
+<pre><code class="ruby">require 'rspec'
+require 'rest_client'
+
+describe 'GitHub API' do
+
+  it 'should return information about a user' do
+    result = RestClient.get 'https://api.github.com/users/rest-client',  :content_type =&gt; :json, :accept =&gt; :json
+    expect(result.code).to eq(200)
+  end   
+end
+</code></pre>
+
+<pre><code class="bash">rafs-computer: rafael$ rspec github_spec.rb
+.
+
+Finished in 0.33354 seconds (files took 0.37339 seconds to load)
+1 example, 0 failures
+</code></pre>
+
+<p>So the response code is good, but how do we know if the json coming back is actually any good?
+There are a few different ways of validating that. One way would be to parse the json from the body and create asserts for each key that you want to check. That works, but it would require you to write several asserts (expects) and it would be hard to maintain.
+Another approach is to compare with a known valid json data file. You can do that using the last gem listed in the Gemfile (json_expressions). Here is the same spec file, modified to include 2 tests - one to validate the result code and one to validate the data.</p>
+
+<pre><code class="ruby">require 'rspec'
+require 'rest_client'
+require 'json_expressions/rspec'
+
+
+describe 'GitHub API' do
+
+  it 'should return 200 when asking information about a user' do
+    result = RestClient.get 'https://api.github.com/users/rest-client',  :content_type =&gt; :json, :accept =&gt; :json
+    expect(result.code).to eq(200)
+  end
+
+  it 'should return proper data for a user' do
+    expected_data = JSON.parse(IO.read('users.json'))
+    result = RestClient.get 'https://api.github.com/users/rest-client',  :content_type =&gt; :json, :accept =&gt; :json
+    expect(result).to match_json_expression(expected_data)  
+  end
+
+end
+</code></pre>
+
+<pre><code class="bash">rafs-computer:rafael$ rspec github_spec.rb
+..
+
+Finished in 0.62559 seconds (files took 0.41733 seconds to load)
+2 examples, 0 failures
+</code></pre>
+
+<p>The users.json file contains a known good response. As you probably guessed, some of the values returned on services like this can change pretty quickly. For example, &ldquo;updated_at&rdquo; is one key where the value is very likely to change. In case you want to just validate the key is there, but you don&rsquo;t care about the value, you can add the following inside your test block:
+<code>ruby
+expected_data['updated_at'] = wildcard_matcher
+</code>
+For more cool things you can do with the json_expression gem, visit the <a href="https://github.com/chancancode/json_expressions">github</a> wiki page.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Selenium and the Page Object Design Pattern]]></title>
+    <link href="http://daudt.github.io/blog/2014/04/29/selenium-and-the-page-object-design-pattern/"/>
+    <updated>2014-04-29T22:20:15-06:00</updated>
+    <id>http://daudt.github.io/blog/2014/04/29/selenium-and-the-page-object-design-pattern</id>
+    <content type="html"><![CDATA[<p>Selenium is the most popular testing framework for web applications. It&rsquo;s free, open-source and very useful when trying to verify how your application will behave on a specific browser. As the <a href="http://www.seleniumhq.org">official website</a> states, &ldquo;Selenium automates browsers&rdquo;. Pretty simple.
+There are a couple different versions of the framework, but I highly recommend using Selenium WebDriver (or Selenium 2), which in my opinion is a lot more robust than the old Selenium IDE. Selenium WebDriver runs in many browsers and operating systems and can be controlled by many programming languages.
+For the purpose of this short tutorial, I&rsquo;m doing this on a Mac and using Ruby and Rspec to write the tests.</p>
+
+<h3>Why Page Objects?</h3>
+
+<p>A few years back when I started doing test automation, I wanted to automate as much as I could to save time, so I started writing a lot of code for the tests. I quickly realized that once the application changed (e.g. Element id changed), I had to go back and update all my tests that were now broken trying to identify a changed element on a page.
+By using the Page Object Design Pattern you basically abstract your application from your tests. That way if you have 50 tests for one page and some element changes, all you need to do is update the one page file, and all tests will continue to pass.</p>
+
+<h3>How does it work?</h3>
+
+<p>You could do this with any language supported by Selenium. Write code that builds a class that represents the page being tested with all identifiers and actions your tests need and then write your tests using that class. Fortunately, in Ruby you don&rsquo;t have to.
+Thanks to <a href="http://www.cheezyworld.com/2011/07/29/introducing-page-object-gem/">Jeff Morgan</a>, Ruby has an awesome gem that does most of the work for you when building page objects. Here&rsquo;s what your page object file should look like:</p>
+
+<pre><code class="ruby">require 'page-object'
+
+class LoginPage
+  include PageObject
+
+  page_url('https://vimeo.com/log_in')
+  text_field(:email, :id =&gt; 'email')
+  text_field(:password, :id =&gt; 'password')
+  button(:login_button, :css =&gt; 'input.btn')
+
+  def login(username, password)
+    self.email = username
+    self.password = password
+    self.login_button
+  end
+
+end
+</code></pre>
+
+<p>I&rsquo;m using the Vimeo login page here, but as long as you change the attributes of the page, it should work for any website that has login functionality.
+You&rsquo;ll find different opinions on this, but I believe asserts should not be part of page objects, as discussed on this <a href="http://stackoverflow.com/questions/11126806/page-object-model-why-not-include-assertions-in-page-methods">stackoverflow thread</a>.
+Once you created the page, you are now ready to write one or more tests:</p>
+
+<pre><code class="ruby">require 'rspec'
+require './login_page'
+require 'selenium-webdriver'
+
+describe 'User Login' do
+
+  before(:each) do
+    @browser = Selenium::WebDriver.for :firefox
+  end
+
+  it 'should login a valid user' do
+    login_page = LoginPage.new(@browser)
+    login_page.goto
+    login_page.login('my_email_address', 'my_password')
+    login_page.text.should include('Welcome home')
+  end
+
+  after(:each) do
+    @browser.quit
+  end
+
+end
+</code></pre>
+
+<p>By default, Selenium includes a driver for Firefox only (on the Mac). If you want to test using Chrome, you need to download <a href="https://code.google.com/p/selenium/wiki/ChromeDriver">ChromeDriver</a> and modify the line inside the <em>before</em> block:
+<code>ruby
+@browser = Selenium::WebDriver.for :chrome
+</code>
+Replace the strings inside the login method with your Vimeo username and password and run the test using rspec:</p>
+
+<pre><code class="ruby">rspec login_spec.rb
+.
+
+Finished in 9.7 seconds
+1 example, 0 failures
+</code></pre>
+
+<p><img src="/images/vimeo_login.jpg"></p>
+
+<p>If you need to interact with other elements on your page, make sure to checkout the wiki pages <a href="https://github.com/cheezy/page-object/wiki/Elements">here</a>.
+On the next post, I&rsquo;ll show you how to test virtually on any browser and operating system, using a cloud service.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Turducken Encryption]]></title>
+    <link href="http://daudt.github.io/blog/2014/04/21/turducken-encryption/"/>
+    <updated>2014-04-21T21:05:45-06:00</updated>
+    <id>http://daudt.github.io/blog/2014/04/21/turducken-encryption</id>
+    <content type="html"><![CDATA[<p>I recently got involved in a project where the client had very specific security requirements. Within the very comprehensive security document given to us, there was a section about encryption. All the web service requests that involved PII needed to be encrypted with <a href="http://en.wikipedia.org/wiki/Pretty_Good_Privacy">PGP</a>. On top of that, all the requests needed to happen over SSL (yeah, I know&hellip;). Ironically, this implementation happened a few weeks before the Heartbleed Bug was discovered, so maybe the client wasn&rsquo;t that paranoid after all.
+The client software was running on an iPad, and the development team had a hard time finding an iOS encryption library that was compatible with the other pieces. After a few failed attempts, we decided to switch the encryption mechanism to a combination of AES and RSA, which made our lives easier.
+I believe tests should be simple and avoid duplicating logic existent in the system under test. The problem is that when you are testing something that requires an encrypted input, unless you can provide that, you are not going to get any valid outputs.
+Since all my tests were written in Ruby using Rspec, I had to come up with some Ruby code that could encrypt and decrypt JSON data.
+The encryption algorithm we used was based on <a href="http://www.ietf.org/rfc/rfc3394.txt">RFC3394</a> and it&rsquo;s basically an AES encrypted message, where the encryption key is then asymmetrically encrypted with an RSA key.</p>
+
+<h3>Let&rsquo;s get coding</h3>
+
+<pre><code class="ruby">require 'openssl'
+require 'base64'
+
+module EnvelopeEncryption
+
+  def encrypt(plaintext, rsa_key, url_safe=true)
+    aes = OpenSSL::Cipher.new('AES-256-CBC')
+    aes.encrypt
+    iv = aes.random_iv
+    session_key = aes.random_key
+    # encrypt the payload with session key
+    ciphertext = aes.update(plaintext) + aes.final
+</code></pre>
+
+<p>At this point the message is encrypted with a random 32 byte key (256 bits) and a 16 byte initialization vector. Since these two are random  on each session, it makes it harder for the key to be cracked.
+Next we need to encrypt the random session key with a 2048 bit RSA key:</p>
+
+<pre><code class="ruby">  encrypted_session_key = rsa_key.public_encrypt(session_key)
+</code></pre>
+
+<p>Now comes the tricky part. The web service is expecting some binary data in a specific format:
+4 bytes + encrypted key + 4 bytes + iv + ciphertext.
+The first 4 bytes represent the size of the encrypted key. The 4 bytes after the key, represent the size of the initialization vector. Also the size representations need to be in 8 bit unsigned big-endian format. We can accomplish this with Ruby&rsquo;s <a href="http://www.ruby-doc.org/core-2.1.1/Array.html#method-i-pack">pack</a> method for arrays.
+<code>ruby
+  encrypted_body = [encrypted_session_key.size].pack('L&gt;')
+  encrypted_body &lt;&lt; encrypted_session_key
+  encrypted_body &lt;&lt; [iv.size].pack('L&gt;')
+  encrypted_body &lt;&lt; iv
+  encrypted_body &lt;&lt; ciphertext
+</code>
+Now we base64 encode the whole thing and return it:
+<code>ruby
+  if url_safe
+    Base64.urlsafe_encode64(encrypted_body)
+  else
+    Base64.encode64(encrypted_body)
+  end
+end
+</code></p>
+
+<p>Since the server is sending us an encrypted response, we also need to create another method to do the reverse:</p>
+
+<pre><code class="ruby">  def decrypt(encoded_byte_stream, rsa_key)
+    byte_stream = Base64.urlsafe_decode64(encoded_byte_stream)
+    key_size = byte_stream.byteslice(0,3)
+    encrypted_session_key = byte_stream.byteslice(4,key_size)
+    iv_size = byte_stream.byteslice(key_size+4,4).unpack('L&gt;')[0]
+    iv = byte_stream.byteslice(key_size+8,iv_size)
+    ciphertext = byte_stream.byteslice(key_size+8+iv_size, byte_stream.size - key_size+8+iv_size)
+    session_key = rsa_key.private_decrypt(encrypted_session_key)
+    # Final decryption
+    aes = OpenSSL::Cipher.new('AES-256-CBC')
+    aes.decrypt
+    aes.iv = iv
+    aes.key = session_key
+    aes.update(ciphertext) + aes.final
+  end
+</code></pre>
+
+<p>Let&rsquo;s test it to make sure it works:</p>
+
+<pre><code class="ruby">require 'encryption'
+
+describe 'Turducken' do
+  include EnvelopeEncryption
+
+  it 'should be able to encrypt/decrypt something' do
+    key = OpenSSL::PKey::RSA.new(File.read('private.pem'))
+    plain = 'The package has been delivered.'
+    encrypted = encrypt(plain, key)
+    decrypt(encrypted, key).should == plain
+  end
+end
+</code></pre>
+
+<hr />
+
+<h3>Conclusion</h3>
+
+<p>Most of the tests I wrote validated the responses and the JSON data being returned (e.g. When a customer gets created). This is probably more code than one wishes to write when creating tests for a web service, but it&rsquo;s a good exercise to understand how AES key wrapping works and how to validate the encryption.</p>
+]]></content>
+  </entry>
+  
+</feed>

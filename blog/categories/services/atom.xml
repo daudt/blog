@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Services | Rafael's Blog]]></title>
+  <link href="http://daudt.github.io/blog/categories/services/atom.xml" rel="self"/>
+  <link href="http://daudt.github.io/"/>
+  <updated>2015-12-20T16:04:06-07:00</updated>
+  <id>http://daudt.github.io/</id>
+  <author>
+    <name><![CDATA[Rafael Daudt]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Testing Third Party Web Services With Ruby]]></title>
+    <link href="http://daudt.github.io/blog/2014/09/29/testing-third-party-web-services-with-ruby/"/>
+    <updated>2014-09-29T17:51:59-06:00</updated>
+    <id>http://daudt.github.io/blog/2014/09/29/testing-third-party-web-services-with-ruby</id>
+    <content type="html"><![CDATA[<p>Testing RESTful services can be a very tedious task if you have to do it manually. Sure, there are browser plugins like Postman and Rest Console, but if you have a large amount of tests you want to execute with every build, that approach might not be very practical.
+Ruby has a lot of cool gems you can use to accomplish that. One of my favorite ones is <a href="https://github.com/rest-client/rest-client">RestClient</a>.
+Combine that with the Ruby&rsquo;s Rspec framework and you can write very powerful tests.
+Let&rsquo;s say Github wanted you to test their RESTful API for them. First thing you&rsquo;d probably want to do is make sure endpoints are returning the response codes you are expecting.
+To start, make sure you have the proper gems installed. Using bundler is the quickest way to do that:</p>
+
+<pre><code class="ruby">source "https://rubygems.org"
+
+gem 'rest-client'
+gem 'rspec'
+gem 'json_expressions'
+</code></pre>
+
+<p>Now run &lsquo;bundle&rsquo; on the same directory where you created the file.
+<code>bash
+rafs-computer:rafael$ bundle
+Using diff-lcs 1.2.5
+Using json_expressions 0.8.3
+Using mime-types 2.3
+Using netrc 0.7.7
+Using rest-client 1.7.2
+Using rspec-support 3.1.1
+Using rspec-core 3.1.4
+Using rspec-expectations 3.1.2
+Using rspec-mocks 3.1.2
+Using rspec 3.1.0
+Using bundler 1.7.3
+Your bundle is complete!
+</code>
+Now let&rsquo;s validate that we are getting 200 response from the users endpoint:</p>
+
+<pre><code class="ruby">require 'rspec'
+require 'rest_client'
+
+describe 'GitHub API' do
+
+  it 'should return information about a user' do
+    result = RestClient.get 'https://api.github.com/users/rest-client',  :content_type =&gt; :json, :accept =&gt; :json
+    expect(result.code).to eq(200)
+  end   
+end
+</code></pre>
+
+<pre><code class="bash">rafs-computer: rafael$ rspec github_spec.rb
+.
+
+Finished in 0.33354 seconds (files took 0.37339 seconds to load)
+1 example, 0 failures
+</code></pre>
+
+<p>So the response code is good, but how do we know if the json coming back is actually any good?
+There are a few different ways of validating that. One way would be to parse the json from the body and create asserts for each key that you want to check. That works, but it would require you to write several asserts (expects) and it would be hard to maintain.
+Another approach is to compare with a known valid json data file. You can do that using the last gem listed in the Gemfile (json_expressions). Here is the same spec file, modified to include 2 tests - one to validate the result code and one to validate the data.</p>
+
+<pre><code class="ruby">require 'rspec'
+require 'rest_client'
+require 'json_expressions/rspec'
+
+
+describe 'GitHub API' do
+
+  it 'should return 200 when asking information about a user' do
+    result = RestClient.get 'https://api.github.com/users/rest-client',  :content_type =&gt; :json, :accept =&gt; :json
+    expect(result.code).to eq(200)
+  end
+
+  it 'should return proper data for a user' do
+    expected_data = JSON.parse(IO.read('users.json'))
+    result = RestClient.get 'https://api.github.com/users/rest-client',  :content_type =&gt; :json, :accept =&gt; :json
+    expect(result).to match_json_expression(expected_data)  
+  end
+
+end
+</code></pre>
+
+<pre><code class="bash">rafs-computer:rafael$ rspec github_spec.rb
+..
+
+Finished in 0.62559 seconds (files took 0.41733 seconds to load)
+2 examples, 0 failures
+</code></pre>
+
+<p>The users.json file contains a known good response. As you probably guessed, some of the values returned on services like this can change pretty quickly. For example, &ldquo;updated_at&rdquo; is one key where the value is very likely to change. In case you want to just validate the key is there, but you don&rsquo;t care about the value, you can add the following inside your test block:
+<code>ruby
+expected_data['updated_at'] = wildcard_matcher
+</code>
+For more cool things you can do with the json_expression gem, visit the <a href="https://github.com/chancancode/json_expressions">github</a> wiki page.</p>
+]]></content>
+  </entry>
+  
+</feed>
